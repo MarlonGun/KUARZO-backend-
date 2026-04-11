@@ -88,4 +88,4 @@ npm start
 * Las sesiones se manejan mediante `jsonwebtoken` (JWT).
 
 ---
-© 2026 Kuarzo - Desarrollado por Nicolás.
+© 2026 Kuarzo
