@@ -7,7 +7,6 @@ Este es el servidor backend de la plataforma Kuarzo, construido con Node.js, Exp
 Asegúrate de tener instalado:
 * [Node.js](https://nodejs.org/) (Versión 18 o superior recomendada)
 * [MySQL](https://www.mysql.com/) o MariaDB
-* Conocimientos básicos de TypeScript
 
 ## 🛠️ Instalación y Configuración
 
