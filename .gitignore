@@ -1,0 +1,16 @@
+# Dependencias pesadas
+node_modules/
+
+# Variables privadas (Contraseñas de la BD)
+.env
+
+# Archivos compilados
+dist/
+
+# Logs del servidor
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misceláneos
+.DS_Store

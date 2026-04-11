@@ -1,0 +1,198 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma/client"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ==============================
+// 1. USUARIOS Y ROLES
+// ==============================
+
+model Rol {
+  id       Int       @id @default(autoincrement())
+  nombre   String
+  usuarios Usuario[]
+}
+
+model Usuario {
+  id              Int      @id @default(autoincrement())
+  rolId           Int
+  primerNombre    String
+  segundoNombre   String? // Signo ? significa que es OPCIONAL (o NULL)
+  primerApellido  String
+  segundoApellido String?
+  correo          String   @unique
+  contrasena      String // las ñ no son buena practica en codigo
+  telefono        String?
+  fechaRegistro   DateTime @default(now())
+  estado          String   @default("ACTIVO")
+
+  // Relaciones Navigacionales para Typescript (No son columnas en la BD)
+  rol         Rol         @relation(fields: [rolId], references: [id])
+  direcciones Direccion[]
+  carrito     Carrito? // 1-a-1 Opcional
+  pedidos     Pedido[]
+}
+
+// ==============================
+// 2. GEOGRAFÍA Y DIRECCIONES
+// ==============================
+
+model Departamento {
+  id       Int      @id @default(autoincrement())
+  nombre   String
+  ciudades Ciudad[]
+}
+
+model Ciudad {
+  id             Int          @id @default(autoincrement())
+  departamentoId Int
+  nombre         String
+  departamento   Departamento @relation(fields: [departamentoId], references: [id])
+  direcciones    Direccion[]
+}
+
+model Direccion {
+  id             Int     @id @default(autoincrement())
+  usuarioId      Int
+  ciudadId       Int
+  callePrincipal String
+  numeroExterior String
+  barrio         String
+  referencia     String?
+  codigoPostal   String?
+
+  usuario Usuario  @relation(fields: [usuarioId], references: [id])
+  ciudad  Ciudad   @relation(fields: [ciudadId], references: [id])
+  pedidos Pedido[]
+}
+
+// ==============================
+// 3. PRODUCTOS Y CATEGORIAS
+// ==============================
+
+model Categoria {
+  id          Int        @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  productos   Producto[]
+}
+
+model Producto {
+  id          Int     @id @default(autoincrement())
+  categoriaId Int
+  nombre      String
+  descripcion String? @db.Text
+  precio      Decimal @db.Decimal(10, 2)
+  stock       Int     @default(0)
+  estado      String  @default("ACTIVO")
+
+  categoria       Categoria        @relation(fields: [categoriaId], references: [id])
+  imagenes        ImagenProducto[]
+  detallesCarrito DetalleCarrito[]
+  detallesPedido  DetallePedido[]
+  detallesFactura DetalleFactura[]
+}
+
+model ImagenProducto {
+  id         Int    @id @default(autoincrement())
+  productoId Int
+  urlImagen  String @db.Text
+
+  producto Producto @relation(fields: [productoId], references: [id])
+}
+
+// ==============================
+// 4. CARRITO DE COMPRAS
+// ==============================
+
+model Carrito {
+  id            Int      @id @default(autoincrement())
+  usuarioId     Int      @unique // UNIQUE lo convierte en 1 a 1 según el modelo relacional 
+  fechaCreacion DateTime @default(now())
+  estado        String   @default("ACTIVO")
+
+  usuario  Usuario          @relation(fields: [usuarioId], references: [id])
+  detalles DetalleCarrito[]
+}
+
+model DetalleCarrito {
+  id         Int @id @default(autoincrement())
+  carritoId  Int
+  productoId Int
+  cantidad   Int
+
+  carrito  Carrito  @relation(fields: [carritoId], references: [id])
+  producto Producto @relation(fields: [productoId], references: [id])
+}
+
+// ==============================
+// 5. PEDIDOS, FACTURACIÓN Y PAGOS
+// ==============================
+
+model Pedido {
+  id          Int      @id @default(autoincrement())
+  usuarioId   Int
+  direccionId Int
+  fechaPedido DateTime @default(now())
+  estado      String   @default("PENDIENTE")
+  total       Decimal  @db.Decimal(10, 2)
+
+  usuario   Usuario         @relation(fields: [usuarioId], references: [id])
+  direccion Direccion       @relation(fields: [direccionId], references: [id])
+  detalles  DetallePedido[]
+  factura   Factura? // 1 a 1
+  pago      Pago?
+}
+
+model DetallePedido {
+  id             Int     @id @default(autoincrement())
+  pedidoId       Int
+  productoId     Int
+  cantidad       Int
+  precioUnitario Decimal @db.Decimal(10, 2)
+
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id])
+  producto Producto @relation(fields: [productoId], references: [id])
+}
+
+model Factura {
+  id           Int      @id @default(autoincrement())
+  pedidoId     Int      @unique // 1 a 1
+  fechaEmision DateTime @default(now())
+  totalPagar   Decimal  @db.Decimal(10, 2)
+
+  pedido   Pedido           @relation(fields: [pedidoId], references: [id])
+  detalles DetalleFactura[]
+}
+
+model DetalleFactura {
+  id             Int     @id @default(autoincrement())
+  facturaId      Int
+  productoId     Int
+  cantidad       Int
+  precioUnitario Decimal @db.Decimal(10, 2)
+  impuesto       Decimal @db.Decimal(10, 2)
+  subTotal       Decimal @db.Decimal(10, 2)
+
+  factura  Factura  @relation(fields: [facturaId], references: [id])
+  producto Producto @relation(fields: [productoId], references: [id])
+}
+
+model Pago {
+  id        Int      @id @default(autoincrement())
+  pedidoId  Int      @unique
+  fechaPago DateTime @default(now())
+  montoPago Decimal  @db.Decimal(10, 2)
+  estado    String
+
+  pedido Pedido @relation(fields: [pedidoId], references: [id])
+}
