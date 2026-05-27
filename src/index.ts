@@ -1,11 +1,15 @@
-import express, { Request, Response } from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
+// Cargar variables de entorno ANTES de cualquier otro import que las use
+dotenv.config();
+
+import express from 'express';
+import cors from 'cors';
+
 import apiRoutes from './routes/api.routes';
 import authRoutes from './routes/auth.routes';
-
-// Iniciar la lectura de variables de entorno
-dotenv.config();
+import pedidoRoutes from './routes/pedido.routes';
+import productoRoutes from './routes/producto.routes';
+import paymentRoutes from './routes/payment.routes';
 
 // Crear la instancia de Express (La apliacion que estamos creando)
 const app = express();
@@ -18,8 +22,11 @@ app.use(express.json()); //Permite que nuestra api reciba datos en formato JSON
 //Rutas
 app.use('/api', apiRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/productos', productoRoutes);
+app.use('/api/pedidos', pedidoRoutes);
+app.use('/api/payments', paymentRoutes);
 
-//Iniciar el servidor en el puerto definido
-app.listen(PORT, () => {
-    console.log(`Servidor de desarrollo activo en http://localhost:${PORT}`);
+// Iniciar el servidor en el puerto definido
+app.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`Servidor activo en puerto ${PORT}`);
 });
