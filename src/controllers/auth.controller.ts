@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db';
+import nodemailer from 'nodemailer';
 
 
 export const register = async (req: Request, res: Response) => {
@@ -102,5 +103,123 @@ export const login = async (req: Request, res: Response) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error al iniciar sesión' });
+    }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+    try {
+        const { correo } = req.body;
+
+        if (!correo) {
+            return res.status(400).json({ error: 'El correo electrónico es obligatorio' });
+        }
+
+        const usuario = await prisma.usuario.findUnique({ where: { correo } });
+        if (!usuario) {
+            return res.status(404).json({ error: 'El correo no está registrado en la base de datos' });
+        }
+
+        const jwtSecret = process.env.JWT_SECRET || 'KUARZO_SUPER_SECRET_2026';
+        const token = jwt.sign({ userId: usuario.id }, jwtSecret, { expiresIn: '15m' });
+
+        // Enlace de restablecimiento (apunta a la web app)
+        const resetLink = `http://localhost:8081/reset-password?token=${token}`;
+
+        // Configuración de nodemailer
+        let transporter;
+        let isTest = false;
+
+        if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+            transporter = nodemailer.createTransport({
+                host: process.env.SMTP_HOST,
+                port: Number(process.env.SMTP_PORT) || 587,
+                secure: process.env.SMTP_SECURE === 'true',
+                auth: {
+                    user: process.env.SMTP_USER,
+                    pass: process.env.SMTP_PASS,
+                },
+            });
+        } else {
+            // Ethereal fallback para desarrollo
+            const testAccount = await nodemailer.createTestAccount();
+            transporter = nodemailer.createTransport({
+                host: 'smtp.ethereal.email',
+                port: 587,
+                secure: false,
+                auth: {
+                    user: testAccount.user,
+                    pass: testAccount.pass,
+                },
+            });
+            isTest = true;
+        }
+
+        const info = await transporter.sendMail({
+            from: '"Kuarzo Soporte" <no-reply@kuarzo.com>',
+            to: correo,
+            subject: 'Restablecer contraseña - Kuarzo',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; border: 1px solid #eaeaea; border-radius: 10px; background-color: #fafafa; margin: 0 auto;">
+                    <h2 style="color: #f97316; text-align: center;">Kuarzo</h2>
+                    <h3 style="color: #111827; text-align: center;">Recuperación de Contraseña</h3>
+                    <p style="color: #4b5563; font-size: 16px; line-height: 24px;">Hola, ${usuario.primerNombre}. Has solicitado restablecer tu contraseña para acceder a la aplicación Kuarzo.</p>
+                    <p style="color: #4b5563; font-size: 16px; line-height: 24px;">Por favor, haz clic en el botón de abajo para cambiar tu contraseña. Este enlace expira en 15 minutos.</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${resetLink}" style="background-color: #f97316; color: white; padding: 14px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+                            Cambiar contraseña
+                        </a>
+                    </div>
+                    <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 30px;">Si no solicitaste este cambio, puedes ignorar este correo de forma segura.</p>
+                </div>
+            `,
+        });
+
+        const testUrl = isTest ? nodemailer.getTestMessageUrl(info) : null;
+        if (testUrl) {
+            console.log(`[TEST MAIL] Mensaje enviado a Ethereal. Ver en: ${testUrl}`);
+        }
+
+        res.json({
+            message: 'Correo de recuperación enviado con éxito',
+            testUrl
+        });
+
+    } catch (error) {
+        console.error('Error al enviar correo de recuperación:', error);
+        res.status(500).json({ error: 'Error interno del servidor al procesar la solicitud' });
+    }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+    try {
+        const { token, contrasena } = req.body;
+
+        if (!token || !contrasena) {
+            return res.status(400).json({ error: 'Token y contraseña nueva son obligatorios' });
+        }
+
+        const jwtSecret = process.env.JWT_SECRET || 'KUARZO_SUPER_SECRET_2026';
+        let decoded: any;
+
+        try {
+            decoded = jwt.verify(token, jwtSecret);
+        } catch (err) {
+            return res.status(400).json({ error: 'El enlace ha expirado o es inválido' });
+        }
+
+        // Encriptar la contraseña
+        const salt = await bcrypt.genSalt(10);
+        const passHashed = await bcrypt.hash(contrasena, salt);
+
+        await prisma.usuario.update({
+            where: { id: decoded.userId },
+            data: { contrasena: passHashed },
+        });
+
+        res.json({ message: 'Contraseña restablecida con éxito' });
+
+    } catch (error) {
+        console.error('Error al restablecer la contraseña:', error);
+        res.status(500).json({ error: 'Error interno del servidor al procesar la solicitud' });
     }
 };
