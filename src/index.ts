@@ -19,6 +19,10 @@ const PORT = process.env.PORT || 3000;
 app.use(cors()); //Permite conexiones a nuestra api desde cualquier origen
 app.use(express.json()); //Permite que nuestra api reciba datos en formato JSON
 
+app.get('/', (req, res) => {
+    res.send('Kuarzo Backend funcionando 🚀');
+});
+
 //Rutas
 app.use('/api', apiRoutes);
 app.use('/api/auth', authRoutes);
