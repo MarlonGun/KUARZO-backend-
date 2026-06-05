@@ -92,3 +92,105 @@ export const crearProducto = async (
         });
     }
 };
+
+export const actualizarProducto = async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const { id } = req.params;
+        const productoId = Number(id);
+
+        const productoExistente = await prisma.producto.findUnique({
+            where: { id: productoId }
+        });
+
+        if (!productoExistente) {
+            return res.status(404).json({
+                error: 'Producto no encontrado'
+            });
+        }
+
+        const {
+            categoriaId,
+            nombre,
+            descripcion,
+            precio,
+            stock,
+            estado
+        } = req.body;
+
+        const updateData: any = {};
+        if (categoriaId !== undefined) updateData.categoriaId = Number(categoriaId);
+        if (nombre !== undefined) updateData.nombre = nombre;
+        if (descripcion !== undefined) updateData.descripcion = descripcion;
+        if (precio !== undefined) updateData.precio = Number(precio);
+        if (stock !== undefined) updateData.stock = Number(stock);
+        if (estado !== undefined) updateData.estado = estado;
+
+        const productoActualizado = await prisma.producto.update({
+            where: { id: productoId },
+            data: updateData
+        });
+
+        res.json({
+            message: 'Producto actualizado con éxito',
+            producto: productoActualizado
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            error: 'Error al actualizar producto'
+        });
+    }
+};
+
+export const eliminarProducto = async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const { id } = req.params;
+        const productoId = Number(id);
+
+        const productoExistente = await prisma.producto.findUnique({
+            where: { id: productoId }
+        });
+
+        if (!productoExistente) {
+            return res.status(404).json({
+                error: 'Producto no encontrado'
+            });
+        }
+
+        try {
+            await prisma.producto.delete({
+                where: { id: productoId }
+            });
+            res.json({
+                message: 'Producto eliminado físicamente con éxito'
+            });
+        } catch (error: any) {
+            // P2003 es el código de error de Prisma para violación de restricción de clave externa (FK constraint)
+            if (error.code === 'P2003') {
+                const productoDesactivado = await prisma.producto.update({
+                    where: { id: productoId },
+                    data: { estado: 'INACTIVO' }
+                });
+                res.json({
+                    message: 'El producto no se pudo borrar físicamente porque está referenciado en pedidos o carritos. Se ha marcado como INACTIVO.',
+                    producto: productoDesactivado
+                });
+            } else {
+                throw error;
+            }
+        }
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            error: 'Error al eliminar producto'
+        });
+    }
+};
