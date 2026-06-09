@@ -67,16 +67,28 @@ export const crearProducto = async (
             nombre,
             descripcion,
             precio,
-            stock
+            stock,
+            imagen
         } = req.body;
 
         const producto = await prisma.producto.create({
             data: {
-                categoriaId,
+                categoriaId: Number(categoriaId),
                 nombre,
                 descripcion,
-                precio,
-                stock
+                precio: Number(precio),
+                stock: Number(stock),
+                // Si envían una url de imagen, se crea la relación en la tabla ImagenProducto
+                ...(imagen && {
+                    imagenes: {
+                        create: {
+                            urlImagen: imagen
+                        }
+                    }
+                })
+            },
+            include: {
+                imagenes: true
             }
         });
 
@@ -117,7 +129,8 @@ export const actualizarProducto = async (
             descripcion,
             precio,
             stock,
-            estado
+            estado,
+            imagen
         } = req.body;
 
         const updateData: any = {};
@@ -128,9 +141,33 @@ export const actualizarProducto = async (
         if (stock !== undefined) updateData.stock = Number(stock);
         if (estado !== undefined) updateData.estado = estado;
 
+        // Si se incluye url de imagen, actualizarla o crearla en la tabla ImagenProducto
+        if (imagen) {
+            const imagenExistente = await prisma.imagenProducto.findFirst({
+                where: { productoId }
+            });
+
+            if (imagenExistente) {
+                await prisma.imagenProducto.update({
+                    where: { id: imagenExistente.id },
+                    data: { urlImagen: imagen }
+                });
+            } else {
+                await prisma.imagenProducto.create({
+                    data: {
+                        productoId,
+                        urlImagen: imagen
+                    }
+                });
+            }
+        }
+
         const productoActualizado = await prisma.producto.update({
             where: { id: productoId },
-            data: updateData
+            data: updateData,
+            include: {
+                imagenes: true
+            }
         });
 
         res.json({
