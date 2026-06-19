@@ -119,11 +119,15 @@ export const forgotPassword = async (req: Request, res: Response) => {
             return res.status(404).json({ error: 'El correo no está registrado en la base de datos' });
         }
 
-        const jwtSecret = process.env.JWT_SECRET || 'KUARZO_SUPER_SECRET_2026';
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            return res.status(500).json({ error: 'Error de configuración del servidor' });
+        }
         const token = jwt.sign({ userId: usuario.id }, jwtSecret, { expiresIn: '15m' });
 
-        // Enlace de restablecimiento (apunta a la web app)
-        const resetLink = `http://localhost:8081/reset-password?token=${token}`;
+        // Enlace de restablecimiento — usa la URL de producción de la web
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8081';
+        const resetLink = `${frontendUrl}/reset-password?token=${token}`;
 
         // Configuración de nodemailer
         let transporter;
@@ -198,7 +202,10 @@ export const resetPassword = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Token y contraseña nueva son obligatorios' });
         }
 
-        const jwtSecret = process.env.JWT_SECRET || 'KUARZO_SUPER_SECRET_2026';
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            return res.status(500).json({ error: 'Error de configuración del servidor' });
+        }
         let decoded: any;
 
         try {

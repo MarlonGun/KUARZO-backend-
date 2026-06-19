@@ -23,7 +23,12 @@ export const authMiddleware = (
         }
 
         const token = authHeader.split(' ')[1];
-        const jwtSecret = process.env.JWT_SECRET || 'KUARZO_SUPER_SECRET_2026';
+        const jwtSecret = process.env.JWT_SECRET;
+
+        if (!jwtSecret) {
+            console.error('JWT_SECRET no está definido en las variables de entorno.');
+            return res.status(500).json({ error: 'Error de configuración del servidor.' });
+        }
 
         const decoded = jwt.verify(token, jwtSecret) as {
             userId: number;

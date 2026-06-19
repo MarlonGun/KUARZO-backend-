@@ -12,7 +12,7 @@ const router = Router();
 
 router.get('/', obtenerProductos);
 router.get('/:id', obtenerProducto);
-router.post('/', crearProducto);
+router.post('/', authMiddleware, crearProducto);
 router.put('/:id', authMiddleware, actualizarProducto);
 router.delete('/:id', authMiddleware, eliminarProducto);
 
