@@ -94,6 +94,7 @@ model Producto {
   precio          Decimal           @db.Decimal(10,2)
   stock           Int               @default(0)
   estado          String            @default("ACTIVO")
+  destacado       Boolean           @default(false)
 
   categoria         Categoria         @relation(fields: [categoriaId], references: [id])
   imagenes          ImagenProducto[]

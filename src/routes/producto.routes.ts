@@ -4,13 +4,15 @@ import {
     obtenerProductos, 
     obtenerProducto, 
     actualizarProducto, 
-    eliminarProducto 
+    eliminarProducto,
+    obtenerProductosDestacados
 } from '../controllers/producto.controller';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
 
 router.get('/', obtenerProductos);
+router.get('/destacados', obtenerProductosDestacados);
 router.get('/:id', obtenerProducto);
 router.post('/', authMiddleware, crearProducto);
 router.put('/:id', authMiddleware, actualizarProducto);

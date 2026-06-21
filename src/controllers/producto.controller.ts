@@ -68,7 +68,8 @@ export const crearProducto = async (
             descripcion,
             precio,
             stock,
-            imagen
+            imagen,
+            destacado
         } = req.body;
 
         const producto = await prisma.producto.create({
@@ -78,6 +79,7 @@ export const crearProducto = async (
                 descripcion,
                 precio: Number(precio),
                 stock: Number(stock),
+                destacado: destacado === true || destacado === 'true',
                 // Si envían una url de imagen, se crea la relación en la tabla ImagenProducto
                 ...(imagen && {
                     imagenes: {
@@ -140,6 +142,7 @@ export const actualizarProducto = async (
         if (precio !== undefined) updateData.precio = Number(precio);
         if (stock !== undefined) updateData.stock = Number(stock);
         if (estado !== undefined) updateData.estado = estado;
+        if (req.body.destacado !== undefined) updateData.destacado = req.body.destacado === true || req.body.destacado === 'true';
 
         // Si se incluye url de imagen, actualizarla o crearla en la tabla ImagenProducto
         if (imagen) {
@@ -228,6 +231,33 @@ export const eliminarProducto = async (
         console.error(error);
         res.status(500).json({
             error: 'Error al eliminar producto'
+        });
+    }
+};
+
+export const obtenerProductosDestacados = async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const productos = await prisma.producto.findMany({
+            where: {
+                destacado: true,
+                estado: 'ACTIVO'
+            },
+            take: 10,
+            include: {
+                categoria: true,
+                imagenes: true
+            }
+        });
+
+        res.json(productos);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            error: 'Error al obtener productos destacados'
         });
     }
 };
