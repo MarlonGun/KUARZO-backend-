@@ -158,8 +158,10 @@ export const forgotPassword = async (req: Request, res: Response) => {
             isTest = true;
         }
 
+        const emailFrom = process.env.EMAIL_FROM || process.env.SMTP_USER || '"Kuarzo Soporte" <no-reply@kuarzo.com>';
+
         const info = await transporter.sendMail({
-            from: '"Kuarzo Soporte" <no-reply@kuarzo.com>',
+            from: emailFrom,
             to: correo,
             subject: 'Restablecer contraseña - Kuarzo',
             html: `
