@@ -5,7 +5,7 @@ import {
     marcarLeido,
     eliminarContacto
 } from '../controllers/contacto.controller';
-import { authMiddleware, adminMiddleware } from '../middlewares/auth.middleware';
+import { authMiddleware, adminMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
 

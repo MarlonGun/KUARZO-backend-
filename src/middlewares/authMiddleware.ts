@@ -50,3 +50,17 @@ export const authMiddleware = (
         });
     }
 };
+
+export const adminMiddleware = (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user || user.rolId !== 2) {
+        return res.status(403).json({
+            error: 'Acceso denegado. Se requiere rol de administrador.'
+        });
+    }
+    next();
+};
