@@ -79,7 +79,7 @@ export const crearProducto = async (
                 descripcion,
                 precio: Number(precio),
                 stock: Number(stock),
-                destacado: destacado === true || destacado === 'true',
+                destacado: destacado === true || destacado === 'true' || destacado === 1 || String(destacado).toLowerCase() === 'true',
                 // Si envían una url de imagen, se crea la relación en la tabla ImagenProducto
                 ...(imagen && {
                     imagenes: {
@@ -142,7 +142,10 @@ export const actualizarProducto = async (
         if (precio !== undefined) updateData.precio = Number(precio);
         if (stock !== undefined) updateData.stock = Number(stock);
         if (estado !== undefined) updateData.estado = estado;
-        if (req.body.destacado !== undefined) updateData.destacado = req.body.destacado === true || req.body.destacado === 'true';
+        if (req.body.destacado !== undefined) {
+            const dest = req.body.destacado;
+            updateData.destacado = dest === true || dest === 'true' || dest === 1 || String(dest).toLowerCase() === 'true';
+        }
 
         // Si se incluye url de imagen, actualizarla o crearla en la tabla ImagenProducto
         if (imagen) {
