@@ -197,3 +197,18 @@ model Pago {
 
   pedido      Pedido    @relation(fields: [pedidoId], references: [id])
 }
+
+// ==============================
+// 7. CONTACTO
+// ==============================
+
+model Contacto {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  apellido  String
+  correo    String
+  telefono  String
+  leido     Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
