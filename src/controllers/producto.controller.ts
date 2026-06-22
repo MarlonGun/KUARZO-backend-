@@ -80,23 +80,28 @@ export const crearProducto = async (
                 precio: Number(precio),
                 stock: Number(stock),
                 destacado: destacado === true || destacado === 'true' || destacado === 1 || String(destacado).toLowerCase() === 'true',
-                // Si envían una url de imagen, se crea la relación en la tabla ImagenProducto
-                ...(imagen && {
-                    imagenes: {
-                        create: {
-                            urlImagen: imagen
-                        }
-                    }
-                })
-            },
-            include: {
-                imagenes: true
             }
+        });
+
+        const imagenesAInsertar = [];
+        if (imagen && typeof imagen === 'string' && imagen.trim() !== '') imagenesAInsertar.push({ productoId: producto.id, urlImagen: imagen.trim() });
+        if (req.body.imagen2 && typeof req.body.imagen2 === 'string' && req.body.imagen2.trim() !== '') imagenesAInsertar.push({ productoId: producto.id, urlImagen: req.body.imagen2.trim() });
+        if (req.body.imagen3 && typeof req.body.imagen3 === 'string' && req.body.imagen3.trim() !== '') imagenesAInsertar.push({ productoId: producto.id, urlImagen: req.body.imagen3.trim() });
+
+        if (imagenesAInsertar.length > 0) {
+            await prisma.imagenProducto.createMany({
+                data: imagenesAInsertar
+            });
+        }
+
+        const productoConImagenes = await prisma.producto.findUnique({
+            where: { id: producto.id },
+            include: { imagenes: true }
         });
 
         res.status(201).json({
             message: 'Producto creado',
-            producto
+            producto: productoConImagenes
         });
 
     } catch (error) {
@@ -148,22 +153,24 @@ export const actualizarProducto = async (
         }
 
         // Si se incluye url de imagen, actualizarla o crearla en la tabla ImagenProducto
-        if (imagen) {
-            const imagenExistente = await prisma.imagenProducto.findFirst({
+        const imagen2 = req.body.imagen2;
+        const imagen3 = req.body.imagen3;
+
+        if (imagen !== undefined || imagen2 !== undefined || imagen3 !== undefined) {
+            // Delete existing images
+            await prisma.imagenProducto.deleteMany({
                 where: { productoId }
             });
+            
+            // Re-insert valid ones
+            const imagesToInsert = [];
+            if (imagen && typeof imagen === 'string' && imagen.trim() !== '') imagesToInsert.push({ productoId, urlImagen: imagen.trim() });
+            if (imagen2 && typeof imagen2 === 'string' && imagen2.trim() !== '') imagesToInsert.push({ productoId, urlImagen: imagen2.trim() });
+            if (imagen3 && typeof imagen3 === 'string' && imagen3.trim() !== '') imagesToInsert.push({ productoId, urlImagen: imagen3.trim() });
 
-            if (imagenExistente) {
-                await prisma.imagenProducto.update({
-                    where: { id: imagenExistente.id },
-                    data: { urlImagen: imagen }
-                });
-            } else {
-                await prisma.imagenProducto.create({
-                    data: {
-                        productoId,
-                        urlImagen: imagen
-                    }
+            if (imagesToInsert.length > 0) {
+                await prisma.imagenProducto.createMany({
+                    data: imagesToInsert
                 });
             }
         }
