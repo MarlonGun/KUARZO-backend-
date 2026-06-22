@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../config/db';
 
 // Crear un nuevo contacto (Público)
 export const crearContacto = async (req: Request, res: Response) => {
