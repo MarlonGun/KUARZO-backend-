@@ -134,14 +134,18 @@ export const forgotPassword = async (req: Request, res: Response) => {
         let isTest = false;
 
         if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+            const port = Number(process.env.SMTP_PORT) || 587;
             transporter = nodemailer.createTransport({
                 host: process.env.SMTP_HOST,
-                port: Number(process.env.SMTP_PORT) || 587,
-                secure: process.env.SMTP_SECURE === 'true',
+                port: port,
+                secure: port === 465, // True para 465, False para 587 o 25
                 auth: {
                     user: process.env.SMTP_USER,
                     pass: process.env.SMTP_PASS,
                 },
+                tls: {
+                    rejectUnauthorized: false // Evita errores de certificados SSL en Railway
+                }
             });
         } else {
             // Ethereal fallback para desarrollo
@@ -154,6 +158,9 @@ export const forgotPassword = async (req: Request, res: Response) => {
                     user: testAccount.user,
                     pass: testAccount.pass,
                 },
+                tls: {
+                    rejectUnauthorized: false
+                }
             });
             isTest = true;
         }
@@ -187,12 +194,15 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
         res.json({
             message: 'Correo de recuperación enviado con éxito',
-            testUrl
+            testUrl,
+            resetLink // Para emergencias de presentación
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error al enviar correo de recuperación:', error);
-        res.status(500).json({ error: 'Error interno del servidor al procesar la solicitud' });
+        res.status(500).json({ 
+            error: error.message || 'Error interno del servidor al procesar la solicitud' 
+        });
     }
 };
 
