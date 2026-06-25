@@ -7,10 +7,11 @@ import cors from 'cors';
 
 import apiRoutes from './routes/api.routes';
 import authRoutes from './routes/auth.routes';
-import pedidoRoutes from './routes/pedido.routes';
+import pedidoRoutes from './routes/pedidos.routes';
 import productoRoutes from './routes/producto.routes';
 import paymentRoutes from './routes/payment.routes';
 import contactoRoutes from './routes/contacto.routes';
+import usuariosRoutes from './routes/usuarios.routes';
 
 // Crear la instancia de Express (La apliacion que estamos creando)
 const app = express();
@@ -31,6 +32,7 @@ app.use('/api/productos', productoRoutes);
 app.use('/api/pedidos', pedidoRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/contacto', contactoRoutes);
+app.use('/api/usuarios', usuariosRoutes);
 
 // Iniciar el servidor en el puerto definido
 app.listen(Number(PORT), '0.0.0.0', () => {
