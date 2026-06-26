@@ -57,12 +57,37 @@ export const obtenerPedidos = async (
         const pedidos = await prisma.pedido.findMany({
             include: {
                 usuario: true,
-                direccion: true,
-                detalles: true
+                direccion: {
+                    include: {
+                        ciudad: true
+                    }
+                },
+                detalles: {
+                    include: {
+                        producto: true
+                    }
+                }
             }
         });
 
-        res.json(pedidos);
+        const pedidosFormateados = pedidos.map((p: any) => ({
+            id: p.id,
+            usuarioId: p.usuarioId,
+            clienteNombre: `${p.usuario?.primerNombre || ''} ${p.usuario?.primerApellido || ''}`.trim(),
+            clienteCorreo: p.usuario?.correo,
+            direccion: `${p.direccion?.callePrincipal || ''} ${p.direccion?.numeroExterior || ''}, ${p.direccion?.barrio || ''}${p.direccion?.ciudad ? ', ' + p.direccion.ciudad.nombre : ''}`,
+            fechaPedido: p.fechaPedido,
+            estado: p.estado,
+            total: p.total,
+            items: p.detalles.map((d: any) => ({
+                productoId: d.productoId,
+                nombre: d.producto?.nombre || `Producto ID ${d.productoId}`,
+                cantidad: d.cantidad,
+                precioUnitario: d.precioUnitario
+            }))
+        }));
+
+        res.json(pedidosFormateados);
 
     } catch (error) {
         console.error(error);
@@ -85,8 +110,16 @@ export const obtenerPedido = async (
             },
             include: {
                 usuario: true,
-                direccion: true,
-                detalles: true
+                direccion: {
+                    include: {
+                        ciudad: true
+                    }
+                },
+                detalles: {
+                    include: {
+                        producto: true
+                    }
+                }
             }
         });
 
@@ -96,7 +129,25 @@ export const obtenerPedido = async (
             });
         }
 
-        res.json(pedido);
+        const p: any = pedido;
+        const pedidoFormateado = {
+            id: p.id,
+            usuarioId: p.usuarioId,
+            clienteNombre: `${p.usuario?.primerNombre || ''} ${p.usuario?.primerApellido || ''}`.trim(),
+            clienteCorreo: p.usuario?.correo,
+            direccion: `${p.direccion?.callePrincipal || ''} ${p.direccion?.numeroExterior || ''}, ${p.direccion?.barrio || ''}${p.direccion?.ciudad ? ', ' + p.direccion.ciudad.nombre : ''}`,
+            fechaPedido: p.fechaPedido,
+            estado: p.estado,
+            total: p.total,
+            items: p.detalles.map((d: any) => ({
+                productoId: d.productoId,
+                nombre: d.producto?.nombre || `Producto ID ${d.productoId}`,
+                cantidad: d.cantidad,
+                precioUnitario: d.precioUnitario
+            }))
+        };
+
+        res.json(pedidoFormateado);
 
     } catch (error) {
         console.error(error);
@@ -122,11 +173,43 @@ export const actualizarEstadoPedido = async (
         }
 
         const pedidoExistente = await prisma.pedido.findUnique({
-            where: { id: Number(id) }
+            where: { id: Number(id) },
+            include: { detalles: true }
         });
 
         if (!pedidoExistente) {
             return res.status(404).json({ error: 'Pedido no encontrado' });
+        }
+
+        const estadoAnterior = pedidoExistente.estado;
+
+        // Si cambia de PENDIENTE a algo pagado/entregado (PROCESADO, ENVIADO, ENTREGADO), descontar stock
+        if (estadoAnterior === 'PENDIENTE' && (estado === 'PROCESADO' || estado === 'ENVIADO' || estado === 'ENTREGADO')) {
+            for (const detalle of pedidoExistente.detalles) {
+                await prisma.producto.update({
+                    where: { id: detalle.productoId },
+                    data: {
+                        stock: {
+                            decrement: detalle.cantidad
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Si el estado anterior NO era PENDIENTE ni CANCELADO (ya se había descontado stock)
+        // y el nuevo estado es CANCELADO, entonces DEVOLVER el stock.
+        if (estadoAnterior !== 'PENDIENTE' && estadoAnterior !== 'CANCELADO' && estado === 'CANCELADO') {
+            for (const detalle of pedidoExistente.detalles) {
+                await prisma.producto.update({
+                    where: { id: detalle.productoId },
+                    data: {
+                        stock: {
+                            increment: detalle.cantidad
+                        }
+                    }
+                });
+            }
         }
 
         const pedidoActualizado = await prisma.pedido.update({
